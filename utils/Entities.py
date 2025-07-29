@@ -1,4 +1,6 @@
 import torch
+from torchvision import models, transforms, datasets
+
 def evaluate_model(model, data_loader, device):
     """Avalia o modelo e retorna métricas"""
     model.eval()
@@ -18,4 +20,3 @@ def evaluate_model(model, data_loader, device):
 
     accuracy = 100 * correct / total
     return accuracy, all_preds, all_labels
-

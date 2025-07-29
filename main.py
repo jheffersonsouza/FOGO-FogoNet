@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+
 import torch
 from torchvision import models, transforms, datasets
 from torchvision.models import Inception_V3_Weights
@@ -8,36 +11,25 @@ import os
 import time
 import numpy as np
 
-from utils.DepoisEuTrocoNome import evaluate_model
+from utils.Entities import evaluate_model
+from utils.DatasetsLoader import request_dataset
 from utils.ReportGenerator import ReportGenerator
 
 # Responsavel por calcular tempo de inferencia, tamanho e matriz de confusão do modelo.
 reportGenerator = ReportGenerator(output_dir="results")
 
-train_tfms = transforms.Compose([
-    transforms.RandomResizedCrop(299, scale=(0.5, 1.0)),
-    transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter(brightness=0.3, contrast=0.3),
-    transforms.RandomRotation(10),  # Rotaciona a imagem em relação o chao
-    transforms.ToTensor(),
-    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-])
+DATASETS_ROOT_PATH = os.path.join('.', "datasets")
 
-test_tfms = transforms.Compose([
-    transforms.Resize(320),
-    transforms.CenterCrop(299),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-])
+dataset = request_dataset(DATASETS_ROOT_PATH)
+if not dataset:
+    print("Dê uma olhada no arquivo 'SETUP' na pasta", Path(DATASETS_ROOT_PATH).absolute())
+    sys.exit(1)
 
-DATASET = "inception-format/"
-train_data = datasets.ImageFolder(DATASET + 'train/', transform=train_tfms)
-val_data = datasets.ImageFolder(DATASET + 'test/', transform=test_tfms)
+train_data, val_data = dataset.get()
+print('Classes do dataset:', train_data.class_to_idx)
 
-print('Classes:', train_data.class_to_idx)
-
-train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
-val_loader = DataLoader(val_data, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=2, pin_memory=True)
+val_loader = DataLoader(val_data, batch_size=32, shuffle=False, num_workers=2, pin_memory=True)
 
 model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT, aux_logits=True)
 model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, 2)

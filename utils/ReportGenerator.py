@@ -6,13 +6,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 
-from utils.DepoisEuTrocoNome import evaluate_model
+from utils.Entities import evaluate_model
 
 class ReportGenerator:
     def __init__(self, output_dir="results"):
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
-        pass
 
     def summary(self, name, model, val_loader, device, save_model=False):
         print(f'{'-'*10} Avaliação do modelo {name}{'-'*10}')
