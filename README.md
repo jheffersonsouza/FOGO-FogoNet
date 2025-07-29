@@ -1,7 +1,7 @@
 # FOGO-FogoNet
 Sistema responsável pelo treinamento e avaliação de modelos de IA para reconhecimento de fogo em imagens capturadas por drones.
 ## Equipe responsável
-()
+[Time de Dados](https://github.com/orgs/pelican-program/teams/time-de-dados)
 
 ## Funcionalidades
 
