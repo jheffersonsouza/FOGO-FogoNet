@@ -43,7 +43,8 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
 
-    print("=== TREINAMENTO DO MODELO ORIGINAL ===")
+    print('-'*50)
+    print('Treinando modelo...')
     max_epochs = 1
     for epoch in range(max_epochs):
         model.train()
@@ -58,9 +59,11 @@ if __name__ == "__main__":
             optimizer.step()
             running_loss += loss.item()
         avg_loss = running_loss / len(train_loader)
-        print(f"Epoch {epoch + 1}/{max_epochs} - Loss: {avg_loss:.4f},",end=' ')
+        # Fiz assim pra mensagem aparecer logo de uma vez, já que evaluate_model tem um delayzinho.
+        epoch_summary = f"Epoch {epoch + 1}/{max_epochs} - Loss: {avg_loss:.4f},"
         accuracy, all_preds, all_labels = evaluate_model(model, val_loader, device)
-        print(f"Accuracy: {accuracy:.2f}%")
+        epoch_summary += f" Accuracy: {accuracy:.2f}%"
+        print(epoch_summary)
     print('Gerando os resultados...')
     reportGenerator.summary("Original", model, val_loader, device, save_model=True)
 """

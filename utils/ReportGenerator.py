@@ -15,7 +15,8 @@ class ReportGenerator:
         os.makedirs(self.output_dir, exist_ok=True)
 
     def summary(self, name, model, val_loader, device, save_model=False):
-        print(f'{"-"*10} Avaliação de modelo - {name}{"-"*10}')
+        txt_header = f'{"-"*15} Avaliação de modelo - {name}{"-"*15}'
+        print(txt_header)
         # TODO: Talvez tirar acentuação?
         modelNameDir = name.strip().lower().replace(' ', '_')
         model_output_dir = os.path.join(self.output_dir, modelNameDir)
@@ -28,8 +29,10 @@ class ReportGenerator:
         self._save_confusion_matrix(name, model_output_dir, labels, preds, val_loader.dataset.classes)
 
         if save_model:
-            torch.save(model.state_dict(), os.path.join(model_output_dir, modelNameDir+ ".pth"))
-            print(f'Modelo salvo em {Path(model_output_dir).absolute()}')
+            save_path = os.path.join(model_output_dir, modelNameDir+ ".pth")
+            torch.save(model.state_dict(), save_path)
+            print(f'Modelo salvo em {Path(save_path).absolute()}')
+        print('-'* len(txt_header))
 
     def _measure_inference_time(self, model, data_loader, device):
         model.eval()
@@ -63,10 +66,11 @@ class ReportGenerator:
         cm = confusion_matrix(all_labels, all_preds)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
 
+        save_name = f"matriz_confusao_{model_name.lower().replace(' ', '_')}"
         plt.figure(figsize=(6, 6))
         disp.plot(cmap=plt.cm.Blues, values_format='d')
         plt.title(f"Matriz de Confusão - {model_name}")
-        plt.savefig(os.path.join(output_dir, f"matriz_confusao_{model_name.lower().replace(' ', '_')}.png"))
+        plt.savefig(os.path.join(output_dir, f"{save_name}.png"))
         plt.close()
 
         report = classification_report(all_labels, all_preds, target_names=class_names)
@@ -74,7 +78,7 @@ class ReportGenerator:
             f.write(f"=== {model_name} ===\n")
             f.write(report)
 
-        np.savetxt(os.path.join(output_dir, f"matriz_confusao_{model_name.lower().replace(' ', '_')}.csv"),
+        np.savetxt(os.path.join(output_dir, f"{save_name}.csv"),
                    cm, delimiter=",", fmt="%d")
-        print(f'Matriz de confusão salva em {Path(output_dir).absolute()}')
+        print(f'Matriz de confusão salva em {Path(output_dir).joinpath(save_name + '.png').absolute()}')
 
