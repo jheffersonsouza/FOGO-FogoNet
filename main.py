@@ -15,54 +15,58 @@ from utils.Entities import evaluate_model
 from utils.DatasetsLoader import request_dataset
 from utils.ReportGenerator import ReportGenerator
 
-# Responsavel por calcular tempo de inferencia, tamanho e matriz de confusão do modelo.
-reportGenerator = ReportGenerator(output_dir="results")
-
 DATASETS_ROOT_PATH = os.path.join('.', "datasets")
+if __name__ == "__main__":
+    print('Iniciando sistema')
+    reportGenerator = ReportGenerator(output_dir="results")
 
-dataset = request_dataset(DATASETS_ROOT_PATH)
-if not dataset:
-    print("Dê uma olhada no arquivo 'SETUP' na pasta", Path(DATASETS_ROOT_PATH).absolute())
-    sys.exit(1)
+    dataset = request_dataset(DATASETS_ROOT_PATH)
+    if not dataset:
+        print("Dê uma olhada no arquivo 'SETUP' na pasta", Path(DATASETS_ROOT_PATH).absolute())
+        sys.exit(1)
 
-train_data, val_data = dataset.get()
-print('Classes do dataset:', train_data.class_to_idx)
+    train_data, val_data = dataset.get(transform_model='inception-format')
+    print('Classes do dataset:', train_data.class_to_idx)
 
-train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=2, pin_memory=True)
-val_loader = DataLoader(val_data, batch_size=32, shuffle=False, num_workers=2, pin_memory=True)
+    train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=2, pin_memory=False)
+    val_loader = DataLoader(val_data, batch_size=32, shuffle=False, num_workers=2, pin_memory=False)
 
-model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT, aux_logits=True)
-model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, 2)
-model.fc = nn.Linear(model.fc.in_features, 2)
+    model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT, aux_logits=True)
+    model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, 2)
+    model.fc = nn.Linear(model.fc.in_features, 2)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = model.to(device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('Device:', device)
 
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+    model = model.to(device)
 
-print("=== TREINAMENTO DO MODELO ORIGINAL ===")
-max_epochs = 50
-for epoch in range(max_epochs):
-    model.train()
-    running_loss = 0.0
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
 
-    for inputs, labels in train_loader:
-        inputs, labels = inputs.to(device), labels.to(device)
+    print("=== TREINAMENTO DO MODELO ORIGINAL ===")
+    max_epochs = 1
+    for epoch in range(max_epochs):
+        txt_header = f"{'-'*10}Epoch {epoch + 1}/{max_epochs} {'-'*10}"
+        print(txt_header)
+        print('Treinando...')
+        model.train()
+        running_loss = 0.0
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
 
-        optimizer.zero_grad()
-        outputs, aux_outputs = model(inputs)
-        loss = criterion(outputs, labels) + 0.4 * criterion(aux_outputs, labels)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-
-    avg_loss = running_loss / len(train_loader)
-    print(f"Epoch {epoch + 1}/{max_epochs}, Loss: {avg_loss:.4f}")
-    accuracy = evaluate_model(model, val_loader, device)
-    print(f"Epoch {epoch + 1}/{max_epochs}, Acurácia: {accuracy:.2f}%")
-
-reportGenerator.summary("Original", model, val_loader, device, save_model=True)
+            optimizer.zero_grad()
+            outputs, aux_outputs = model(inputs)
+            loss = criterion(outputs, labels) + 0.4 * criterion(aux_outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+        avg_loss = running_loss / len(train_loader)
+        print(f"Loss: {avg_loss:.4f}")
+        accuracy = evaluate_model(model, val_loader, device)
+        print(f"Acurácia: {accuracy:.2f}%")
+        print(f'-'*len(txt_header))
+        print('Gerando os resultados...')
+        reportGenerator.summary("Original", model, val_loader, device, save_model=True)
 """
 
 print("\n=== QUANTIZAÇÃO DINÂMICA ===")

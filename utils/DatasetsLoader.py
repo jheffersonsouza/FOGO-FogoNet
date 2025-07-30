@@ -48,7 +48,7 @@ def _get_datasets(datasets_root_path):
     for folder in os.listdir(datasets_root_path):
         full_path = os.path.join(datasets_root_path, folder)
         if os.path.isdir(full_path):
-            datasets.append(Dataset(folder, full_path))
+            datasets.append(Dataset(folder, datasets_root_path))
     return datasets
 
 
