@@ -46,9 +46,6 @@ if __name__ == "__main__":
     print("=== TREINAMENTO DO MODELO ORIGINAL ===")
     max_epochs = 1
     for epoch in range(max_epochs):
-        txt_header = f"{'-'*10}Epoch {epoch + 1}/{max_epochs} {'-'*10}"
-        print(txt_header)
-        print('Treinando...')
         model.train()
         running_loss = 0.0
         for inputs, labels in train_loader:
@@ -61,12 +58,11 @@ if __name__ == "__main__":
             optimizer.step()
             running_loss += loss.item()
         avg_loss = running_loss / len(train_loader)
-        print(f"Loss: {avg_loss:.4f}")
+        print(f"Epoch {epoch + 1}/{max_epochs} - Loss: {avg_loss:.4f},",end=' ')
         accuracy, all_preds, all_labels = evaluate_model(model, val_loader, device)
-        print(f"Acurácia: {accuracy:.2f}%")
-        print(f'-'*len(txt_header))
-        print('Gerando os resultados...')
-        reportGenerator.summary("Original", model, val_loader, device, save_model=True)
+        print(f"Accuracy: {accuracy:.2f}%")
+    print('Gerando os resultados...')
+    reportGenerator.summary("Original", model, val_loader, device, save_model=True)
 """
 
 print("\n=== QUANTIZAÇÃO DINÂMICA ===")
