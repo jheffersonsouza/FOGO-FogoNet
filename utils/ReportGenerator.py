@@ -14,20 +14,21 @@ class ReportGenerator:
         os.makedirs(self.output_dir, exist_ok=True)
 
     def summary(self, name, model, val_loader, device, save_model=False):
-        print(f'{'-'*10} Avaliação do modelo {name}{'-'*10}')
+        print(f'{"-"*10} Avaliação do modelo {name}{"-"*10}')
         # TODO: Talvez tirar acentuação?
         modelNameDir = name.strip().lower().replace(' ', '_')
-        output_dir = os.path.join(self.output_dir, modelNameDir)
+        model_output_dir = os.path.join(self.output_dir, modelNameDir)
+        os.makedirs(model_output_dir, exist_ok=True)
 
         accuracy, preds, labels = evaluate_model(model, val_loader, device)
         print(f"Acurácia: {accuracy:.2f}%")
         print(f"Tempo médio por batch: {self._measure_inference_time(model, val_loader, device):.4f}s")
         print(f"Tamanho: {self._get_model_size(model, name):.2f} MB")
         print('Gerando matrix de confusão...')
-        self._save_confusion_matrix(name, output_dir, labels, preds, val_loader.dataset.classes)
+        self._save_confusion_matrix(name, model_output_dir, labels, preds, val_loader.dataset.classes)
 
         if save_model:
-            torch.save(model.state_dict(), os.path.join(output_dir, modelNameDir+ ".pth"))
+            torch.save(model.state_dict(), os.path.join(model_output_dir, modelNameDir+ ".pth"))
 
     def _measure_inference_time(self, model, data_loader, device):
         model.eval()

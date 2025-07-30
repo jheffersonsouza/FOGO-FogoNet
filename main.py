@@ -62,7 +62,7 @@ if __name__ == "__main__":
             running_loss += loss.item()
         avg_loss = running_loss / len(train_loader)
         print(f"Loss: {avg_loss:.4f}")
-        accuracy = evaluate_model(model, val_loader, device)
+        accuracy, all_preds, all_labels = evaluate_model(model, val_loader, device)
         print(f"Acurácia: {accuracy:.2f}%")
         print(f'-'*len(txt_header))
         print('Gerando os resultados...')
