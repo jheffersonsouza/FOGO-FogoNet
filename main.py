@@ -10,10 +10,10 @@ import os
 import time
 import numpy as np
 
-from scripts.Entities import evaluate_model, get_runtime_options
-from scripts.DatasetsLoader import request_dataset
-from scripts.ModelQuantizer import ModelQuantizer
-from scripts.ReportGenerator import ReportGenerator
+from core.Entities import evaluate_model, get_runtime_options
+from core.DatasetsLoader import request_dataset
+from core.ModelQuantizer import ModelQuantizer
+from core.ReportGenerator import ReportGenerator
 
 DATASETS_ROOT_PATH = os.path.join('.', "datasets")
 if __name__ == "__main__":
@@ -77,10 +77,7 @@ if __name__ == "__main__":
         quantizer.dynamic()
     if should_quantize_statically:
         quantizer.static()
-
-
-
-
+"""
 print('-' * 60)
 print("COMPARAÇÃO FINAL DOS MODELOS")
 print("-" * 60)
@@ -162,3 +159,4 @@ if static_accuracy == 0:
     print("NOTA: Quantização estática não funcionou neste ambiente.")
     print("Isso é comum em algumas instalações do PyTorch.")
     print("A quantização dinâmica ainda oferece bons resultados!")
+"""

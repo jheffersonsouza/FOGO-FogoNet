@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 
-from scripts.Entities import evaluate_model
+from core.Entities import evaluate_model
 
 class ReportGenerator:
     def __init__(self, output_dir="results"):
