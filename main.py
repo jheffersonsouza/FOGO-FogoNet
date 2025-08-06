@@ -6,19 +6,23 @@ from torchvision import models, transforms, datasets
 from torchvision.models import Inception_V3_Weights
 from torch import nn, optim
 from torch.utils.data import DataLoader
-import torch.quantization as quantization
 import os
 import time
 import numpy as np
 
-from utils.Entities import evaluate_model
-from utils.DatasetsLoader import request_dataset
-from utils.ReportGenerator import ReportGenerator
+from scripts.Entities import evaluate_model, get_runtime_options
+from scripts.DatasetsLoader import request_dataset
+from scripts.ModelQuantizer import ModelQuantizer
+from scripts.ReportGenerator import ReportGenerator
 
 DATASETS_ROOT_PATH = os.path.join('.', "datasets")
 if __name__ == "__main__":
     print('Iniciando sistema')
     reportGenerator = ReportGenerator(output_dir="results")
+
+
+
+    should_quantize_dynamically, should_quantize_statically = get_runtime_options()
 
     dataset = request_dataset(DATASETS_ROOT_PATH)
     if not dataset:
@@ -66,77 +70,16 @@ if __name__ == "__main__":
         print(epoch_summary)
     print('Gerando os resultados...')
     reportGenerator.summary("Original", model, val_loader, device, save_model=True)
-"""
 
-print("\n=== QUANTIZAÇÃO DINÂMICA ===")
-model_cpu = model.to('cpu')
-model_dynamic_quantized = torch.quantization.quantize_dynamic(
-    model_cpu,
-    {torch.nn.Linear},
-    dtype=torch.qint8
-)
-print("Quantização dinâmica aplicada!")
-device_quant = torch.device("cpu")
-reportGenerator.summary("Quantizado Dinâmico", model_dynamic_quantized, val_loader, device_quant)
+    # Quantização
+    quantizer = ModelQuantizer(model, val_loader, reportGenerator)
+    if should_quantize_dynamically:
+        quantizer.dynamic()
+    if should_quantize_statically:
+        quantizer.static()
 
-print("\n=== QUANTIZAÇÃO ESTÁTICA (PÓS-TREINAMENTO) ===")
 
-try:
-    model_static = models.googlenet(pretrained=True)
-    model_static.fc = nn.Linear(model_static.fc.in_features, 2)
-    model_static.load_state_dict(model_cpu.state_dict())
 
-    model_static.eval()
-
-    backends = ['fbgemm', 'qnnpack']
-    model_static_quantized = None
-
-    for backend in backends:
-        try:
-            print(f"Tentando quantização com backend: {backend}")
-            model_static.qconfig = quantization.get_default_qconfig(backend)
-
-            model_static_prepared = quantization.prepare(model_static, inplace=False)
-
-            print("Calibrando modelo com dados de validação...")
-            with torch.no_grad():
-                for i, (inputs, _) in enumerate(val_loader):
-                    if i >= 10:
-                        break
-                    model_static_prepared(inputs)
-                    if i % 5 == 0:
-                        print(f"Calibração: {i + 1}/10 batches processados")
-
-            model_static_quantized = quantization.convert(model_static_prepared, inplace=False)
-            print(f"Quantização estática aplicada com sucesso usando backend: {backend}!")
-            break
-
-        except Exception as e:
-            print(f"Erro com backend {backend}: {e}")
-            continue
-
-    if model_static_quantized is not None:
-        static_accuracy, static_preds, static_labels = evaluate_model(
-            model_static_quantized, val_loader, device_quant, "Modelo Quantizado Estático"
-        )
-        static_time = measure_inference_time(model_static_quantized, val_loader, device_quant,
-                                             "Modelo Quantizado Estático")
-        static_size = get_model_size(model_static_quantized, "Modelo Quantizado Estático")
-
-        save_confusion_matrix(static_labels, static_preds, class_names, output_dir, "Modelo Quantizado Estático")
-    else:
-        print("ERRO: Não foi possível aplicar quantização estática com nenhum backend disponível.")
-        print("Continuando apenas com quantização dinâmica...")
-        static_accuracy = 0
-        static_time = 0
-        static_size = 0
-
-except Exception as e:
-    print(f"ERRO na quantização estática: {e}")
-    print("Continuando apenas com quantização dinâmica...")
-    static_accuracy = 0
-    static_time = 0
-    static_size = 0
 
 print('-' * 60)
 print("COMPARAÇÃO FINAL DOS MODELOS")
@@ -219,4 +162,3 @@ if static_accuracy == 0:
     print("NOTA: Quantização estática não funcionou neste ambiente.")
     print("Isso é comum em algumas instalações do PyTorch.")
     print("A quantização dinâmica ainda oferece bons resultados!")
-"""
