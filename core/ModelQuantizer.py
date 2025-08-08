@@ -12,8 +12,9 @@ from importlib.util import module_from_spec
 
 class ModelQuantizer:
     def __init__(self, model, val_loader, report_generator: ReportGenerator):
-        self.modelName = model[0]
+        self.modelName = str(model[0]).lower()
         self.model = model[1]
+
         self.val_loader = val_loader
         self.reportGenerator = report_generator
     def dynamic(self):
@@ -30,25 +31,33 @@ class ModelQuantizer:
         print('Aplicando quantização estatica...')
         model_cpu = self.model.to('cpu')
         
-        quantizer_dir = "scripts/static_quantizers"
-        model_static_quantized = None        
+        quantizer_dir = "scripts/models"
+        model_static_quantized = None
         if os.path.exists(quantizer_dir):
             for filename in os.listdir(quantizer_dir):
                 if filename.endswith('.py'):
-                    module_name = filename[:-3]  #.py
+                    module_name = filename[:-3]
                     try:
                         spec = spec_from_file_location(module_name, os.path.join(quantizer_dir, filename))
                         module = module_from_spec(spec)
                         spec.loader.exec_module(module)
                         
-                        if hasattr(module, 'handles_model') and module.handles_model(self.modelName):
-                            print(f"Using quantizer from {filename}")
-                            model_static_quantized = module.quantize(model_cpu, self.val_loader, self.reportGenerator)
+                        fetch_display_name = getattr(module, 'display_name', None)
+                        name_ok = False
+                        if callable(fetch_display_name):
+                            try:
+                                name_ok = str(fetch_display_name()).lower() == self.modelName
+                            except TypeError:
+                                pass
+                        if name_ok:
+                            print(f"(debug) Usando quantização estatica do arquivo {filename}")
+                            if hasattr(module, 'static_quantize') and callable(getattr(module, 'static_quantize')):
+                                model_static_quantized = module.static_quantize(model_cpu, self.val_loader, self.reportGenerator)
                             break
                     except Exception as e:
                         print(f"Error loading {filename}: {e}")
         
         if not model_static_quantized:
-            print(f'Modelo {self.modelName} não possui uma implementação de quantização estatica.')
+            print(f"Modelo {self.modelName} não possui uma implementação de quantização estatica.")
 
 
