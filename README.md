@@ -14,17 +14,25 @@ Sistema responsável pelo treinamento e avaliação de modelos de IA para reconh
 
 ```
 FOGO-FogoNet/
-├── datasets/                  - Diretório para armazenamento dos datasets
-│   └── SETUP.md               
-├── results/                   - Diretório onde são salvos os resultados da avaliação
-├── utils/                     
-│   ├── DatasetsLoader.py      - Carregamento e pré-processamento dos datasets
-│   ├── Entities.py            - Funções referente ao modelo a ser utilizado e outras coisas ae
-│   └── ReportGenerator.py     - Geração de relatórios e visualizações
-├── dependencies.txt           
-├── main.py                    - Script principal para treinamento e avaliação
-└── README.md                  
+├── datasets/
+│   └── SETUP.md
+├── core/
+│   ├── DatasetsLoader.py
+│   ├── Entities.py
+│   ├── ModelQuantizer.py
+│   └── ReportGenerator.py
+├── scripts/
+│   └── models/
+│       ├── GooglenetImpl.py
+│       ├── InceptionV3Impl.py
+│       └── SETUP.md
+├── results/
+├── dependencies.txt
+├── main.py
+└── README.md
 ```
+
+Para aprender a criar/registrar um novo modelo, consulte: [scripts/models/SETUP.md](scripts/models/SETUP.md)
 
 ## Dependências
 
