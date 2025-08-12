@@ -10,24 +10,21 @@ import os
 import time
 import numpy as np
 
-from core.Entities import evaluate_model, get_runtime_options
+from core.Entities import evaluate_model, get_model_options, request_model
 from core.DatasetsLoader import request_dataset
 from core.ModelQuantizer import ModelQuantizer
 from core.ReportGenerator import ReportGenerator
 
 DATASETS_ROOT_PATH = os.path.join('.', "datasets")
 if __name__ == "__main__":
-    print('Iniciando sistema')
-    reportGenerator = ReportGenerator(output_dir="results")
-
-
-
-    should_quantize_dynamically, should_quantize_statically = get_runtime_options()
+    print('Iniciando..')
 
     dataset = request_dataset(DATASETS_ROOT_PATH)
     if not dataset:
         print("Dê uma olhada no arquivo 'SETUP' na pasta", Path(DATASETS_ROOT_PATH).absolute())
         sys.exit(1)
+
+    reportGenerator = ReportGenerator(output_dir="results")
 
     train_data, val_data = dataset.get(transform_model='inception-format')
     print('Classes do dataset:', train_data.class_to_idx)
@@ -35,44 +32,39 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True, num_workers=2, pin_memory=False)
     val_loader = DataLoader(val_data, batch_size=32, shuffle=False, num_workers=2, pin_memory=False)
 
-    model = models.inception_v3(weights=models.Inception_V3_Weights.DEFAULT, aux_logits=True)
-    model.AuxLogits.fc = nn.Linear(model.AuxLogits.fc.in_features, 2)
-    model.fc = nn.Linear(model.fc.in_features, 2)
+    # Modelo a ser usado
+    model, model_name, criterion, optimizer, train_fn = request_model()
+
+    # Opções do modelo
+    should_quantize_dynamically, should_quantize_statically = get_model_options()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('Device:', device)
 
     model = model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+    max_epochs = int(input('Quantas epocas deseja treinar?'))
+    while max_epochs <= 0:
+        print('Número de epocas inválido, tente novamente.')
+        max_epochs = int(input('Quantas epocas deseja treinar?'))
 
-    print('-'*50)
-    print('Treinando modelo...')
-    max_epochs = 1
-    for epoch in range(max_epochs):
-        model.train()
-        running_loss = 0.0
-        for inputs, labels in train_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-
-            optimizer.zero_grad()
-            outputs, aux_outputs = model(inputs)
-            loss = criterion(outputs, labels) + 0.4 * criterion(aux_outputs, labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        avg_loss = running_loss / len(train_loader)
-        # Fiz assim pra mensagem aparecer logo de uma vez, já que evaluate_model tem um delayzinho.
-        epoch_summary = f"Epoch {epoch + 1}/{max_epochs} - Loss: {avg_loss:.4f},"
-        accuracy, all_preds, all_labels = evaluate_model(model, val_loader, device)
-        epoch_summary += f" Accuracy: {accuracy:.2f}%"
-        print(epoch_summary)
+    if callable(train_fn):
+        model = train_fn(max_epochs=max_epochs,
+                         device=device,
+                         model=model,
+                         optimizer=optimizer,
+                         criterion=criterion,
+                         train_loader=train_loader,
+                         val_loader=val_loader
+                         )
+    else:
+        print('Função de treino não encontrada na implementação do modelo. Nenhum treino foi realizado.')
+        sys.exit(1)
     print('Gerando os resultados...')
     reportGenerator.summary("Original", model, val_loader, device, save_model=True)
 
     # Quantização
-    quantizer = ModelQuantizer(model, val_loader, reportGenerator)
+    quantizer = ModelQuantizer([model_name,model], val_loader, reportGenerator)
     if should_quantize_dynamically:
         quantizer.dynamic()
     if should_quantize_statically:

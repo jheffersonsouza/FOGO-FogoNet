@@ -1,5 +1,6 @@
 .idea/
 .venv/
 datasets/*
+results/*
 #Garante que o git ignore o unico arquivo que deve ir pro remote.
 !datasets/SETUP.md
